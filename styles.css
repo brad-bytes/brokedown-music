@@ -474,6 +474,7 @@ h3 {
 }
 
 .watch-btn {
+  display: inline-block;
   background: var(--gold-soft);
   color: #1a1a1a;
   border: 0;
@@ -485,9 +486,16 @@ h3 {
   cursor: pointer;
   border-radius: 2px;
   transition: background 0.15s;
+  text-decoration: none;
 }
 
 .watch-btn:hover { background: var(--gold); }
+
+.watch-btn.is-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: default;
+}
 
 .key-context-heading {
   margin-top: 18px;
@@ -542,8 +550,17 @@ h3 {
 .next-cover {
   aspect-ratio: 1 / 1;
   background: linear-gradient(135deg, #6a5d3a, #3a3120);
+  background-size: cover;
+  background-position: center;
   position: relative;
   border: 1px solid var(--line);
+  display: block;
+  text-decoration: none;
+}
+
+.next-cover:hover {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
 }
 
 .play-mini {
@@ -551,6 +568,13 @@ h3 {
   bottom: 4px; left: 6px;
   color: var(--gold-soft);
   font-size: 0.7rem;
+}
+
+.listen-next-empty {
+  grid-column: 1 / -1;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .footer-meta {

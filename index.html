@@ -24,6 +24,15 @@
       </div>
 
       <div class="hero-info">
+        <div class="artist-search">
+          <label for="bandSearchInput">Search for a band</label>
+          <div class="artist-search-controls">
+            <input id="bandSearchInput" type="text" placeholder="e.g., Radiohead" value="The Beatles">
+            <button id="bandSearchBtn" type="button">Search</button>
+          </div>
+          <p id="searchStatus" aria-live="polite"></p>
+        </div>
+
         <h1 class="album-name">THE BEATLES</h1>
         <h2 class="album-sub"><em>Please Please Me</em></h2>
         <hr class="hero-divider">
@@ -31,30 +40,30 @@
         <div class="facts">
           <div class="fact">
             <div class="fact-icon">📅</div>
-            <div class="fact-label">RELEASED</div>
-            <div class="fact-value">March 22, 1963</div>
+            <div class="fact-label" id="factLabel1">ACTIVE YEARS</div>
+            <div class="fact-value" id="factValue1">1957 - 1970</div>
           </div>
           <div class="fact">
             <div class="fact-icon">📍</div>
-            <div class="fact-label">RECORDED AT</div>
-            <div class="fact-value">EMI, Abbey Road<br>Studios, London</div>
+            <div class="fact-label" id="factLabel2">COUNTRY / AREA</div>
+            <div class="fact-value" id="factValue2">United Kingdom</div>
           </div>
           <div class="fact">
             <div class="fact-icon">⊙</div>
-            <div class="fact-label">LABEL</div>
-            <div class="fact-value">Parlophone (UK)</div>
+            <div class="fact-label" id="factLabel3">ARTIST TYPE</div>
+            <div class="fact-value" id="factValue3">Group</div>
           </div>
           <div class="fact">
             <div class="fact-icon">👥</div>
-            <div class="fact-label">SCENE</div>
-            <div class="fact-value">Liverpool /<br>Merseybeat</div>
+            <div class="fact-label" id="factLabel4">SCENE / TAGS</div>
+            <div class="fact-value" id="factValue4">Merseybeat / Rock</div>
           </div>
         </div>
 
         <div class="info-tracks">
           <div class="essential-info">
             <h3>ESSENTIAL INFO</h3>
-            <ul>
+            <ul id="essentialInfoList">
               <li>Debut LP assembled quickly after the massive success of the "Please Please Me" single.</li>
               <li>Captures the Beatles at their most direct—stage-tested arrangements, tight vocal interplay, and relentless energy from years of club shows.</li>
               <li>Most of the album was recorded in a single day (Feb 11, 1963) at Abbey Road, preserving the rawness of their live act.</li>
@@ -203,10 +212,10 @@
       <div class="live-photo" aria-label="The Beatles live at Cavern Club"></div>
       <h4>Cavern Club, Liverpool – Early 1963</h4>
       <p>Live footage and surviving audio from the Cavern captures the intensity and speed that the Beatles brought into the studio.</p>
-      <button class="watch-btn" type="button">WATCH THE PERFORMANCE</button>
+      <a id="watchPerformanceLink" class="watch-btn" href="#" target="_blank" rel="noopener noreferrer">WATCH THE PERFORMANCE</a>
 
       <h3 class="key-context-heading">KEY CONTEXT</h3>
-      <ul class="key-context">
+      <ul class="key-context" id="keyContextList">
         <li><span class="kc-icon">★</span> Beatlemania explodes throughout 1963.</li>
         <li><span class="kc-icon">🎤</span> Constant touring and TV appearances follow.</li>
         <li><span class="kc-icon">🏛</span> Debut LP that turned local fame into national mania.</li>
@@ -219,12 +228,7 @@
   <section class="footer-row">
     <div class="listen-next">
       <h3>▶ LISTEN NEXT <span class="follow">(FOLLOW THE THREAD)</span></h3>
-      <div class="next-covers">
-        <div class="next-cover"><div class="play-mini">▶</div></div>
-        <div class="next-cover"><div class="play-mini">▶</div></div>
-        <div class="next-cover"><div class="play-mini">▶</div></div>
-        <div class="next-cover"><div class="play-mini">▶</div></div>
-      </div>
+      <div class="next-covers" id="nextCovers"></div>
     </div>
 
     <div class="footer-meta">
@@ -246,5 +250,467 @@
   </section>
 
 </main>
+<script>
+  const bandSearchInput = document.getElementById("bandSearchInput");
+  const bandSearchBtn = document.getElementById("bandSearchBtn");
+  const searchStatus = document.getElementById("searchStatus");
+  const albumName = document.querySelector(".album-name");
+  const albumSub = document.querySelector(".album-sub em");
+  const albumCover = document.querySelector(".album-cover");
+  const coverTitle = document.querySelector(".cover-title");
+  const coverPlease = document.querySelector(".please");
+  const coverPleaseMe = document.querySelector(".please-me");
+  const coverWithLove = document.querySelector(".with-love");
+  const factLabel1 = document.getElementById("factLabel1");
+  const factLabel3 = document.getElementById("factLabel3");
+  const factValue1 = document.getElementById("factValue1");
+  const factValue2 = document.getElementById("factValue2");
+  const factValue3 = document.getElementById("factValue3");
+  const factValue4 = document.getElementById("factValue4");
+  const essentialTracksList = document.querySelector(".essential-tracks ol");
+  const essentialInfoList = document.getElementById("essentialInfoList");
+  const keyContextList = document.getElementById("keyContextList");
+  const watchPerformanceLink = document.getElementById("watchPerformanceLink");
+  const nextCovers = document.getElementById("nextCovers");
+
+  function formatLifeSpan(lifeSpan) {
+    if (!lifeSpan) return "Unknown";
+    const start = lifeSpan.begin || "Unknown";
+    const end = lifeSpan.ended ? (lifeSpan.end || "Present") : "Present";
+    return start + " - " + end;
+  }
+
+  function toTitleCase(text) {
+    if (!text) return "Unknown";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function formatDate(dateText) {
+    if (!dateText) return "Unknown";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateText)) {
+      const date = new Date(dateText + "T00:00:00");
+      return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    }
+    return dateText;
+  }
+
+  function splitTitleForCover(title) {
+    if (!title) {
+      return { line1: "NO", line2: "TITLE" };
+    }
+
+    const words = title.toUpperCase().split(/\s+/).filter(Boolean);
+    if (words.length === 1) {
+      return { line1: words[0], line2: "" };
+    }
+    const midpoint = Math.ceil(words.length / 2);
+    return {
+      line1: words.slice(0, midpoint).join(" "),
+      line2: words.slice(midpoint).join(" ")
+    };
+  }
+
+  async function canLoadImage(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
+
+  async function fetchArtistByName(name) {
+    const query = encodeURIComponent('artist:"' + name + '"');
+    const searchUrl = "https://musicbrainz.org/ws/2/artist/?query=" + query + "&fmt=json&limit=5";
+    const searchRes = await fetch(searchUrl, {
+      headers: { Accept: "application/json" }
+    });
+
+    if (!searchRes.ok) {
+      throw new Error("Search request failed.");
+    }
+
+    const searchData = await searchRes.json();
+    const artists = searchData.artists || [];
+    if (!artists.length) {
+      return null;
+    }
+
+    // Prefer exact (case-insensitive) name match; otherwise use first result.
+    const exact = artists.find((artist) => artist.name.toLowerCase() === name.toLowerCase());
+    return exact || artists[0];
+  }
+
+  async function fetchArtistDetails(mbid) {
+    const detailsUrl = "https://musicbrainz.org/ws/2/artist/" + mbid + "?fmt=json&inc=tags+genres";
+    const detailsRes = await fetch(detailsUrl, {
+      headers: { Accept: "application/json" }
+    });
+
+    if (!detailsRes.ok) {
+      throw new Error("Details request failed.");
+    }
+
+    return detailsRes.json();
+  }
+
+  function buildYouTubeSearchUrl(query) {
+    return "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
+  }
+
+  async function fetchAlbumReleaseGroups(artistId) {
+    const url = "https://musicbrainz.org/ws/2/release-group?artist=" + artistId + "&type=album&fmt=json&limit=25";
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      throw new Error("Release group request failed.");
+    }
+
+    const data = await res.json();
+    const groups = (data["release-groups"] || []).filter((group) => group["primary-type"] === "Album");
+    groups.sort((a, b) => (a["first-release-date"] || "9999").localeCompare(b["first-release-date"] || "9999"));
+    return groups;
+  }
+
+  async function fetchTopReleaseGroup(artistId) {
+    const groups = await fetchAlbumReleaseGroups(artistId);
+    return groups.length ? groups[0] : null;
+  }
+
+  async function fetchReleaseForGroup(releaseGroupId) {
+    const url = "https://musicbrainz.org/ws/2/release?release-group=" + releaseGroupId + "&fmt=json&inc=labels&limit=25";
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      throw new Error("Release request failed.");
+    }
+
+    const data = await res.json();
+    const releases = data.releases || [];
+    if (!releases.length) return null;
+
+    releases.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+    return releases[0];
+  }
+
+  async function fetchReleaseTracklist(releaseId) {
+    const url = "https://musicbrainz.org/ws/2/release/" + releaseId + "?fmt=json&inc=recordings";
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      throw new Error("Tracklist request failed.");
+    }
+
+    const data = await res.json();
+    const media = data.media || [];
+    const trackNames = [];
+
+    for (const disc of media) {
+      const tracks = disc.tracks || [];
+      for (const track of tracks) {
+        const title = track.title || track.recording?.title;
+        if (title) {
+          trackNames.push(title);
+        }
+      }
+    }
+
+    return trackNames;
+  }
+
+  async function resolveCoverUrl(releaseId, releaseGroupId) {
+    const candidates = [
+      "https://coverartarchive.org/release/" + releaseId + "/front-500",
+      "https://coverartarchive.org/release-group/" + releaseGroupId + "/front-500"
+    ];
+
+    for (const url of candidates) {
+      // Try loading the image directly; if it fails, move to next candidate.
+      const ok = await canLoadImage(url);
+      if (ok) return url;
+    }
+
+    return null;
+  }
+
+  async function fetchWikipediaSummary(artistName) {
+    if (!artistName) {
+      return "";
+    }
+
+    const title = encodeURIComponent(artistName.replace(/\s+/g, "_"));
+    const url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + title;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      return "";
+    }
+
+    const data = await res.json();
+    return data.extract || "";
+  }
+
+  function pickScene(details) {
+    const genres = (details.genres || []).map((g) => g.name).filter(Boolean);
+    const tags = (details.tags || []).map((t) => t.name).filter(Boolean);
+    const merged = [...genres, ...tags];
+    if (!merged.length) return "No tags available";
+    return merged.slice(0, 4).join(" / ");
+  }
+
+  function splitIntoSentences(text) {
+    if (!text) return [];
+    return text
+      .split(/(?<=[.!?])\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  function renderBulletList(listEl, items, fallbackText) {
+    if (!listEl) return;
+    listEl.innerHTML = "";
+
+    const cleaned = (items || []).map((item) => item.trim()).filter(Boolean);
+    const values = cleaned.length ? cleaned : [fallbackText];
+    for (const value of values) {
+      const li = document.createElement("li");
+      li.textContent = value;
+      listEl.appendChild(li);
+    }
+  }
+
+  function renderEssentialInfo(details, releaseGroup, release, trackNames, summaryText) {
+    const summarySentence = splitIntoSentences(summaryText)[0] || "";
+    const trackCount = (trackNames || []).length;
+    const bulletPoints = [
+      summarySentence,
+      releaseGroup?.title ? "Album focus: " + releaseGroup.title + "." : "",
+      release?.date ? "First release date: " + formatDate(release.date) + "." : "",
+      details?.area?.name ? "Origin area: " + details.area.name + "." : "",
+      trackCount ? "This edition includes " + trackCount + " listed tracks." : ""
+    ];
+
+    renderBulletList(
+      essentialInfoList,
+      bulletPoints.slice(0, 5),
+      "No extended context available yet for this artist."
+    );
+  }
+
+  function renderKeyContext(details, releaseGroup, release, summaryText) {
+    const genres = (details?.genres || []).map((genre) => genre.name).filter(Boolean).slice(0, 2);
+    const tags = (details?.tags || []).map((tag) => tag.name).filter(Boolean).slice(0, 2);
+    const sentence = splitIntoSentences(summaryText)[1] || "";
+
+    const contextItems = [
+      releaseGroup?.["first-release-date"] ? "★ Era marker: " + releaseGroup["first-release-date"] + "." : "",
+      details?.["life-span"]?.begin ? "🎤 Career starts in " + details["life-span"].begin + "." : "",
+      genres.length ? "🏛 Core genres: " + genres.join(" / ") + "." : "",
+      tags.length ? "↯ Scene tags: " + tags.join(" / ") + "." : "",
+      release?.country ? "📍 Early release region: " + release.country + "." : "",
+      sentence
+    ];
+
+    renderBulletList(
+      keyContextList,
+      contextItems.slice(0, 4),
+      "No additional context available for this artist yet."
+    );
+  }
+
+  function renderArtist(details) {
+    albumName.textContent = (details.name || "Unknown Artist").toUpperCase();
+    albumSub.textContent = "Artist Overview";
+    factLabel1.textContent = "ACTIVE YEARS";
+    factValue1.textContent = formatLifeSpan(details["life-span"]);
+    factValue2.textContent = details.area?.name || details.country || "Unknown";
+    factLabel3.textContent = "ARTIST TYPE";
+    factValue3.textContent = toTitleCase(details.type || "artist");
+    factValue4.textContent = pickScene(details);
+  }
+
+  function renderAlbum(releaseGroup, release, artistName, coverUrl) {
+    if (!releaseGroup) {
+      return;
+    }
+
+    albumSub.textContent = releaseGroup.title || "Artist Overview";
+    factLabel1.textContent = "RELEASED";
+    factValue1.textContent = formatDate(release?.date || releaseGroup["first-release-date"]);
+    factLabel3.textContent = "LABEL";
+    factValue3.textContent = release?.["label-info"]?.[0]?.label?.name || "Unknown";
+
+    coverTitle.textContent = (artistName || "UNKNOWN ARTIST").toUpperCase();
+    const splitTitle = splitTitleForCover(releaseGroup.title);
+    coverPlease.textContent = splitTitle.line1;
+    coverPleaseMe.textContent = splitTitle.line2;
+    coverWithLove.textContent = (release?.date ? "Released " + formatDate(release.date) : "Album metadata from MusicBrainz");
+    albumCover.setAttribute("aria-label", "Album cover: " + (releaseGroup.title || "Unknown release"));
+
+    if (coverUrl) {
+      albumCover.style.backgroundImage = "linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url('" + coverUrl + "')";
+      albumCover.style.backgroundSize = "cover";
+      albumCover.style.backgroundPosition = "center";
+    } else {
+      albumCover.style.backgroundImage = "";
+      albumCover.style.backgroundSize = "";
+      albumCover.style.backgroundPosition = "";
+    }
+  }
+
+  function updateWatchLink(artistName, albumTitle) {
+    if (!watchPerformanceLink) {
+      return;
+    }
+
+    if (!artistName) {
+      watchPerformanceLink.href = "#";
+      watchPerformanceLink.classList.add("is-disabled");
+      watchPerformanceLink.setAttribute("aria-disabled", "true");
+      return;
+    }
+
+    const query = albumTitle
+      ? artistName + " " + albumTitle + " live performance"
+      : artistName + " live performance";
+    watchPerformanceLink.href = buildYouTubeSearchUrl(query);
+    watchPerformanceLink.classList.remove("is-disabled");
+    watchPerformanceLink.removeAttribute("aria-disabled");
+  }
+
+  function renderListenNext(releaseGroups, featuredGroupId, artistName) {
+    if (!nextCovers) {
+      return;
+    }
+
+    nextCovers.innerHTML = "";
+    const related = (releaseGroups || [])
+      .filter((group) => group.id !== featuredGroupId)
+      .slice(0, 4);
+
+    if (!related.length) {
+      const placeholder = document.createElement("p");
+      placeholder.className = "listen-next-empty";
+      placeholder.textContent = "No related albums found yet.";
+      nextCovers.appendChild(placeholder);
+      return;
+    }
+
+    for (const group of related) {
+      const link = document.createElement("a");
+      link.className = "next-cover";
+      link.href = buildYouTubeSearchUrl(artistName + " " + group.title + " full album");
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.title = group.title + " on YouTube";
+
+      const coverUrl = "https://coverartarchive.org/release-group/" + group.id + "/front-250";
+      link.style.backgroundImage = "linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url('" + coverUrl + "')";
+
+      const play = document.createElement("div");
+      play.className = "play-mini";
+      play.textContent = "▶";
+      link.appendChild(play);
+
+      nextCovers.appendChild(link);
+    }
+  }
+
+  function renderTracks(trackNames) {
+    if (!essentialTracksList) {
+      return;
+    }
+
+    essentialTracksList.innerHTML = "";
+
+    const tracksToRender = (trackNames || []).slice(0, 20);
+    if (!tracksToRender.length) {
+      const fallback = document.createElement("li");
+      fallback.textContent = "Track data unavailable for this release.";
+      essentialTracksList.appendChild(fallback);
+      return;
+    }
+
+    for (const trackName of tracksToRender) {
+      const li = document.createElement("li");
+      li.textContent = trackName;
+      essentialTracksList.appendChild(li);
+    }
+  }
+
+  async function searchAndRenderArtist() {
+    const rawName = bandSearchInput.value.trim();
+    if (!rawName) {
+      searchStatus.textContent = "Enter a band name first.";
+      return;
+    }
+
+    // Clear stale tracks immediately so the UI reflects the current search state.
+    renderTracks([]);
+    renderEssentialInfo(null, null, null, [], "");
+    renderKeyContext(null, null, null, "");
+    updateWatchLink(null, null);
+    renderListenNext([], null, "");
+    searchStatus.textContent = "Searching MusicBrainz...";
+    bandSearchBtn.disabled = true;
+
+    try {
+      const topArtist = await fetchArtistByName(rawName);
+      if (!topArtist) {
+        searchStatus.textContent = 'No artist found for "' + rawName + '".';
+        return;
+      }
+
+      const details = await fetchArtistDetails(topArtist.id);
+      renderArtist(details);
+      const summaryText = await fetchWikipediaSummary(details.name);
+
+      const albumGroups = await fetchAlbumReleaseGroups(topArtist.id);
+      const releaseGroup = albumGroups.length ? albumGroups[0] : null;
+      if (releaseGroup) {
+        const release = await fetchReleaseForGroup(releaseGroup.id);
+        const coverUrl = release ? await resolveCoverUrl(release.id, releaseGroup.id) : null;
+        renderAlbum(releaseGroup, release, details.name, coverUrl);
+        updateWatchLink(details.name, releaseGroup.title);
+        renderListenNext(albumGroups, releaseGroup.id, details.name);
+        let loadedTracks = [];
+        if (release) {
+          try {
+            loadedTracks = await fetchReleaseTracklist(release.id);
+            renderTracks(loadedTracks);
+          } catch (trackError) {
+            console.error(trackError);
+            renderTracks([]);
+          }
+        } else {
+          renderTracks([]);
+        }
+        renderEssentialInfo(details, releaseGroup, release, loadedTracks, summaryText);
+        renderKeyContext(details, releaseGroup, release, summaryText);
+        searchStatus.textContent = 'Loaded artist, album, and track data for "' + details.name + '".';
+      } else {
+        renderTracks([]);
+        updateWatchLink(details.name, null);
+        renderListenNext([], null, details.name);
+        renderEssentialInfo(details, null, null, [], summaryText);
+        renderKeyContext(details, null, null, summaryText);
+        searchStatus.textContent = 'Loaded artist data for "' + details.name + '" (no album found).';
+      }
+    } catch (error) {
+      console.error(error);
+      renderTracks([]);
+      renderEssentialInfo(null, null, null, [], "");
+      renderKeyContext(null, null, null, "");
+      updateWatchLink(null, null);
+      renderListenNext([], null, "");
+      searchStatus.textContent = "Could not load artist data right now.";
+    } finally {
+      bandSearchBtn.disabled = false;
+    }
+  }
+
+  bandSearchBtn.addEventListener("click", searchAndRenderArtist);
+  bandSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      searchAndRenderArtist();
+    }
+  });
+</script>
 </body>
 </html>
