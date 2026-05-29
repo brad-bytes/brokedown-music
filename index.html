@@ -114,7 +114,7 @@
     <!-- KEY CONTRIBUTORS -->
     <div class="col key-contributors">
       <h3>KEY CONTRIBUTORS</h3>
-      <div class="contributors">
+      <div class="contributors" id="contributorsList">
         <div class="contributor">
           <div class="portrait" aria-hidden="true"></div>
           <strong>George Martin</strong>
@@ -211,6 +211,7 @@
   const nextCovers = document.getElementById("nextCovers");
   const timelineTrack = document.getElementById("timelineTrack");
   const influenceList = document.getElementById("influenceList");
+  const contributorsList = document.getElementById("contributorsList");
   const livePhoto = document.getElementById("livePhoto");
   const liveDocHeading = document.getElementById("liveDocHeading");
   const liveDocBlurb = document.getElementById("liveDocBlurb");
@@ -299,7 +300,7 @@
   }
 
   async function fetchArtistDetails(mbid) {
-    const detailsUrl = "https://musicbrainz.org/ws/2/artist/" + mbid + "?fmt=json&inc=tags+genres+url-rels+release-groups";
+    const detailsUrl = "https://musicbrainz.org/ws/2/artist/" + mbid + "?fmt=json&inc=tags+genres+url-rels+artist-rels+release-groups";
     return mbFetch(detailsUrl);
   }
 
@@ -409,6 +410,24 @@
 
     releases.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
     return releases[0];
+  }
+
+  async function fetchReleaseRelations(releaseId) {
+    // Producer/engineer credits usually live on the individual recordings, so pull
+    // release-level and recording-level artist relations in a single request.
+    const url = "https://musicbrainz.org/ws/2/release/" + releaseId + "?fmt=json&inc=recordings+artist-rels+recording-level-rels";
+    const data = await mbFetch(url);
+    const relations = [...(data.relations || [])];
+
+    for (const disc of data.media || []) {
+      for (const track of disc.tracks || []) {
+        for (const relation of track.recording?.relations || []) {
+          relations.push(relation);
+        }
+      }
+    }
+
+    return relations;
   }
 
   async function fetchReleaseTracklist(releaseId) {
@@ -848,6 +867,115 @@
     }
   }
 
+  // MusicBrainz relationship "type" -> display role + blurb. Higher in the list = higher priority
+  // when one person holds multiple roles, so we surface the most senior credit.
+  const CONTRIBUTOR_ROLES = [
+    { type: "producer", label: "Producer", blurb: "Produced the album sessions." },
+    { type: "engineer", label: "Engineer", blurb: "Engineered the studio recordings." },
+    { type: "mix", label: "Mixing Engineer", blurb: "Mixed the album." },
+    { type: "mastering", label: "Mastering Engineer", blurb: "Mastered the final recordings." }
+  ];
+
+  function buildContributors(releaseRelations, artistDetails, albumTitle) {
+    const album = albumTitle || "the album";
+    const MANAGER_INDEX = CONTRIBUTOR_ROLES.length;
+    const people = new Map();
+
+    // Tally how many credits each person holds per role, so the primary
+    // producer/engineer (most recordings worked on) ranks highest.
+    const tally = (name, roleIndex) => {
+      if (!name || roleIndex === -1) return;
+      let person = people.get(name);
+      if (!person) {
+        person = { name: name, roleCounts: new Map() };
+        people.set(name, person);
+      }
+      person.roleCounts.set(roleIndex, (person.roleCounts.get(roleIndex) || 0) + 1);
+    };
+
+    // Producers / engineers / mixers / mastering come from the album's relations.
+    for (const relation of releaseRelations || []) {
+      tally(relation.artist?.name, CONTRIBUTOR_ROLES.findIndex((r) => r.type === relation.type));
+    }
+
+    // Managers come from the artist's own relationships.
+    for (const relation of artistDetails?.relations || []) {
+      if (relation.type === "manager") {
+        tally(relation.artist?.name, MANAGER_INDEX);
+      }
+    }
+
+    const ranked = [...people.values()].map((person) => {
+      // Dominant role = most credits; ties broken by role seniority (lower index).
+      let bestIndex = MANAGER_INDEX;
+      let bestCount = -1;
+      let total = 0;
+      for (const [index, count] of person.roleCounts) {
+        total += count;
+        if (count > bestCount || (count === bestCount && index < bestIndex)) {
+          bestCount = count;
+          bestIndex = index;
+        }
+      }
+      return { name: person.name, roleIndex: bestIndex, total: total };
+    });
+
+    // Most-credited contributors first; break ties by role seniority.
+    ranked.sort((a, b) => b.total - a.total || a.roleIndex - b.roleIndex);
+
+    return ranked.slice(0, 6).map((person) => {
+      if (person.roleIndex === MANAGER_INDEX) {
+        return { name: person.name, role: "Manager", blurb: "Managed the band's career and direction." };
+      }
+      const role = CONTRIBUTOR_ROLES[person.roleIndex];
+      const blurb = role.type === "producer"
+        ? "Produced the " + album + " sessions."
+        : role.blurb;
+      return { name: person.name, role: role.label, blurb: blurb };
+    });
+  }
+
+  function renderContributors(contributors, bandName) {
+    if (!contributorsList) {
+      return;
+    }
+
+    contributorsList.innerHTML = "";
+
+    if (!contributors?.length) {
+      const empty = document.createElement("p");
+      empty.className = "contributors-empty";
+      empty.textContent = "No documented producers, engineers, or managers found for "
+        + (bandName || "this artist") + " on MusicBrainz.";
+      contributorsList.appendChild(empty);
+      return;
+    }
+
+    for (const contributor of contributors) {
+      const card = document.createElement("div");
+      card.className = "contributor";
+
+      const portrait = document.createElement("div");
+      portrait.className = "portrait";
+      portrait.setAttribute("aria-hidden", "true");
+
+      const name = document.createElement("strong");
+      name.textContent = contributor.name;
+
+      const role = document.createElement("em");
+      role.textContent = contributor.role;
+
+      const blurb = document.createElement("p");
+      blurb.textContent = contributor.blurb;
+
+      card.appendChild(portrait);
+      card.appendChild(name);
+      card.appendChild(role);
+      card.appendChild(blurb);
+      contributorsList.appendChild(card);
+    }
+  }
+
   function pickScene(details) {
     const genres = (details.genres || []).map((g) => g.name).filter(Boolean);
     const tags = (details.tags || []).map((t) => t.name).filter(Boolean);
@@ -1056,6 +1184,7 @@
     renderListenNext([], null, "");
     renderTimeline([], null);
     renderInfluences([], "");
+    renderContributors([], "");
     renderLivePhoto(null, "");
     searchStatus.textContent = "Searching MusicBrainz...";
     bandSearchBtn.disabled = true;
@@ -1114,6 +1243,17 @@
         }
         renderEssentialInfo(details, releaseGroup, release, loadedTracks, summaryText);
         renderKeyContext(details, releaseGroup, release, summaryText);
+
+        let releaseRelations = [];
+        if (release) {
+          try {
+            releaseRelations = await fetchReleaseRelations(release.id);
+          } catch (relError) {
+            console.warn("Contributor lookup failed:", relError);
+          }
+        }
+        renderContributors(buildContributors(releaseRelations, details, releaseGroup.title), details.name);
+
         searchStatus.textContent = 'Loaded artist, album, and track data for "' + details.name + '".';
       } else {
         renderTracks([]);
@@ -1122,6 +1262,7 @@
         renderTimeline(albumGroups, null);
         renderEssentialInfo(details, null, null, [], summaryText);
         renderKeyContext(details, null, null, summaryText);
+        renderContributors(buildContributors([], details, null), details.name);
         searchStatus.textContent = 'Loaded artist data for "' + details.name + '" (no album found).';
       }
     } catch (error) {
@@ -1133,6 +1274,7 @@
       renderListenNext([], null, "");
       renderTimeline([], null);
       renderInfluences([], "");
+      renderContributors([], "");
       renderLivePhoto(null, "");
       const detail = error?.message ? " (" + error.message + ")" : "";
       searchStatus.textContent = "Could not load artist data right now." + detail;
