@@ -317,6 +317,14 @@ h3 {
   font-weight: 600;
 }
 
+.timeline-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* ========== Three columns ========== */
 .three-col {
   display: grid;
@@ -354,10 +362,20 @@ h3 {
   width: 52px; height: 52px;
   border-radius: 50%;
   background: linear-gradient(135deg, #8a7a5a, #4d4232);
+  background-size: cover;
+  background-position: center;
   border: 2px solid var(--bg-cream);
   box-shadow: 0 0 0 1px var(--gold-soft);
   position: relative;
   z-index: 1;
+}
+
+.influence-empty {
+  display: block;
+}
+
+.influence-empty .influence-text p {
+  margin: 0;
 }
 
 .influence-text strong {
@@ -455,6 +473,8 @@ h3 {
   background:
     linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.6)),
     repeating-linear-gradient(45deg, #2a2a2a 0 8px, #1f1f1f 8px 16px);
+  background-size: cover;
+  background-position: center;
   margin-bottom: 8px;
   border: 1px solid #1a1a1a;
 }
